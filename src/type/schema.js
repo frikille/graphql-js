@@ -12,6 +12,7 @@ import {
   isObjectType,
   isInterfaceType,
   isUnionType,
+  isInputUnionType,
   isInputObjectType,
   isWrappingType,
 } from './definition';
@@ -288,6 +289,10 @@ function typeMapReducer(map: TypeMap, type: ?GraphQLType): TypeMap {
   let reducedMap = map;
 
   if (isUnionType(type)) {
+    reducedMap = type.getTypes().reduce(typeMapReducer, reducedMap);
+  }
+
+  if (isInputUnionType(type)) {
     reducedMap = type.getTypes().reduce(typeMapReducer, reducedMap);
   }
 

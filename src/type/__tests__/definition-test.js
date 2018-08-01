@@ -7,9 +7,11 @@
 
 import {
   GraphQLSchema,
+  GraphQLLiteralType,
   GraphQLScalarType,
   GraphQLEnumType,
   GraphQLInputObjectType,
+  GraphQLInputUnionType,
   GraphQLInterfaceType,
   GraphQLObjectType,
   GraphQLUnionType,
@@ -95,7 +97,17 @@ const ObjectType = new GraphQLObjectType({ name: 'Object' });
 const InterfaceType = new GraphQLInterfaceType({ name: 'Interface' });
 const UnionType = new GraphQLUnionType({ name: 'Union', types: [ObjectType] });
 const EnumType = new GraphQLEnumType({ name: 'Enum', values: { foo: {} } });
-const InputObjectType = new GraphQLInputObjectType({ name: 'InputObject' });
+const LiteralType = new GraphQLLiteralType({ name: 'LiteralType' });
+const InputObjectType = new GraphQLInputObjectType({
+  name: 'InputObject',
+  fields: {
+    literal: { type: LiteralType },
+  },
+});
+const InputUnionType = new GraphQLInputUnionType({
+  name: 'InputUnion',
+  types: [InputObjectType],
+});
 const ScalarType = new GraphQLScalarType({
   name: 'Scalar',
   serialize() {},
@@ -342,6 +354,8 @@ describe('Type System: Example', () => {
     expect(String(UnionType)).to.equal('Union');
     expect(String(EnumType)).to.equal('Enum');
     expect(String(InputObjectType)).to.equal('InputObject');
+    expect(String(LiteralType)).to.equal('LiteralType');
+    expect(String(InputUnionType)).to.equal('InputUnion');
     expect(String(GraphQLNonNull(GraphQLInt))).to.equal('Int!');
     expect(String(GraphQLList(GraphQLInt))).to.equal('[Int]');
     expect(String(GraphQLNonNull(GraphQLList(GraphQLInt)))).to.equal('[Int]!');

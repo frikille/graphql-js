@@ -347,6 +347,11 @@ describe('Introspection', () => {
               interfaces: null,
               enumValues: [
                 {
+                  name: 'LITERAL',
+                  isDeprecated: false,
+                  deprecationReason: null,
+                },
+                {
                   name: 'SCALAR',
                   isDeprecated: false,
                   deprecationReason: null,
@@ -363,6 +368,11 @@ describe('Introspection', () => {
                 },
                 {
                   name: 'UNION',
+                  isDeprecated: false,
+                  deprecationReason: null,
+                },
+                {
+                  name: 'INPUT_UNION',
                   isDeprecated: false,
                   deprecationReason: null,
                 },
@@ -752,6 +762,11 @@ describe('Introspection', () => {
                   deprecationReason: null,
                 },
                 {
+                  name: 'LITERAL',
+                  isDeprecated: false,
+                  deprecationReason: null,
+                },
+                {
                   name: 'SCALAR',
                   isDeprecated: false,
                   deprecationReason: null,
@@ -778,6 +793,11 @@ describe('Introspection', () => {
                 },
                 {
                   name: 'UNION',
+                  isDeprecated: false,
+                  deprecationReason: null,
+                },
+                {
+                  name: 'INPUT_UNION',
                   isDeprecated: false,
                   deprecationReason: null,
                 },
@@ -1351,6 +1371,10 @@ describe('Introspection', () => {
             'An enum describing what kind of type a given `__Type` is.',
           enumValues: [
             {
+              description: 'Indicates this type is a literal.',
+              name: 'LITERAL',
+            },
+            {
               description: 'Indicates this type is a scalar.',
               name: 'SCALAR',
             },
@@ -1371,6 +1395,12 @@ describe('Introspection', () => {
                 'Indicates this type is a union. ' +
                 '`possibleTypes` is a valid field.',
               name: 'UNION',
+            },
+            {
+              description:
+                'Indicates this type is an input union. ' +
+                '`possibleTypes` is a valid field.',
+              name: 'INPUT_UNION',
             },
             {
               description:

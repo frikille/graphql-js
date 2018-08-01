@@ -16,10 +16,12 @@ import {
   GraphQLEnumType,
   GraphQLList,
   GraphQLNonNull,
+  isLiteralType,
   isScalarType,
   isObjectType,
   isInterfaceType,
   isUnionType,
+  isInputUnionType,
   isEnumType,
   isInputObjectType,
   isListType,
@@ -139,6 +141,10 @@ export const __DirectiveLocation = new GraphQLEnumType({
       value: DirectiveLocation.SCHEMA,
       description: 'Location adjacent to a schema definition.',
     },
+    LITERAL: {
+      value: DirectiveLocation.LITERAL,
+      description: 'Location adjacent to a literal definition.',
+    },
     SCALAR: {
       value: DirectiveLocation.SCALAR,
       description: 'Location adjacent to a scalar definition.',
@@ -162,6 +168,10 @@ export const __DirectiveLocation = new GraphQLEnumType({
     UNION: {
       value: DirectiveLocation.UNION,
       description: 'Location adjacent to a union definition.',
+    },
+    INPUT_UNION: {
+      value: DirectiveLocation.INPUT_UNION,
+      description: 'Location adjacent to an input union definition.',
     },
     ENUM: {
       value: DirectiveLocation.ENUM,
@@ -188,7 +198,7 @@ export const __Type = new GraphQLObjectType({
     'The fundamental unit of any GraphQL Schema is the type. There are ' +
     'many kinds of types in GraphQL as represented by the `__TypeKind` enum.' +
     '\n\nDepending on the kind of a type, certain fields describe ' +
-    'information about that type. Scalar types provide no information ' +
+    'information about that type. Scalar and Literal types provide no information ' +
     'beyond a name and description, while Enum types provide their values. ' +
     'Object and Interface types provide the fields they describe. Abstract ' +
     'types, Union and Interface, provide the Object types possible ' +
@@ -197,7 +207,9 @@ export const __Type = new GraphQLObjectType({
     kind: {
       type: GraphQLNonNull(__TypeKind),
       resolve(type) {
-        if (isScalarType(type)) {
+        if (isLiteralType(type)) {
+          return TypeKind.LITERAL;
+        } else if (isScalarType(type)) {
           return TypeKind.SCALAR;
         } else if (isObjectType(type)) {
           return TypeKind.OBJECT;
@@ -205,6 +217,8 @@ export const __Type = new GraphQLObjectType({
           return TypeKind.INTERFACE;
         } else if (isUnionType(type)) {
           return TypeKind.UNION;
+        } else if (isInputUnionType(type)) {
+          return TypeKind.INPUT_UNION;
         } else if (isEnumType(type)) {
           return TypeKind.ENUM;
         } else if (isInputObjectType(type)) {
@@ -379,10 +393,12 @@ export const __EnumValue = new GraphQLObjectType({
 });
 
 export const TypeKind = {
+  LITERAL: 'LITERAL',
   SCALAR: 'SCALAR',
   OBJECT: 'OBJECT',
   INTERFACE: 'INTERFACE',
   UNION: 'UNION',
+  INPUT_UNION: 'INPUT_UNION',
   ENUM: 'ENUM',
   INPUT_OBJECT: 'INPUT_OBJECT',
   LIST: 'LIST',
@@ -393,6 +409,10 @@ export const __TypeKind = new GraphQLEnumType({
   name: '__TypeKind',
   description: 'An enum describing what kind of type a given `__Type` is.',
   values: {
+    LITERAL: {
+      value: TypeKind.LITERAL,
+      description: 'Indicates this type is a literal.',
+    },
     SCALAR: {
       value: TypeKind.SCALAR,
       description: 'Indicates this type is a scalar.',
@@ -413,6 +433,12 @@ export const __TypeKind = new GraphQLEnumType({
       value: TypeKind.UNION,
       description:
         'Indicates this type is a union. ' +
+        '`possibleTypes` is a valid field.',
+    },
+    INPUT_UNION: {
+      value: TypeKind.INPUT_UNION,
+      description:
+        'Indicates this type is an input union. ' +
         '`possibleTypes` is a valid field.',
     },
     ENUM: {

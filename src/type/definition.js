@@ -17,19 +17,23 @@ import type { ObjMap } from '../jsutils/ObjMap';
 import { Kind } from '../language/kinds';
 import { valueFromASTUntyped } from '../utilities/valueFromASTUntyped';
 import type {
+  LiteralTypeDefinitionNode,
   ScalarTypeDefinitionNode,
   ObjectTypeDefinitionNode,
   FieldDefinitionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   UnionTypeDefinitionNode,
+  InputUnionTypeDefinitionNode,
   EnumTypeDefinitionNode,
   EnumValueDefinitionNode,
   InputObjectTypeDefinitionNode,
+  LiteralTypeExtensionNode,
   ScalarTypeExtensionNode,
   ObjectTypeExtensionNode,
   InterfaceTypeExtensionNode,
   UnionTypeExtensionNode,
+  InputUnionTypeExtensionNode,
   EnumTypeExtensionNode,
   InputObjectTypeExtensionNode,
   OperationDefinitionNode,
@@ -46,10 +50,12 @@ import type { MaybePromise } from '../jsutils/MaybePromise';
  * These are all of the possible kinds of types.
  */
 export type GraphQLType =
+  | GraphQLLiteralType
   | GraphQLScalarType
   | GraphQLObjectType
   | GraphQLInterfaceType
   | GraphQLUnionType
+  | GraphQLInputUnionType
   | GraphQLEnumType
   | GraphQLInputObjectType
   | GraphQLList<any>
@@ -57,10 +63,12 @@ export type GraphQLType =
 
 export function isType(type: mixed): boolean %checks {
   return (
+    isLiteralType(type) ||
     isScalarType(type) ||
     isObjectType(type) ||
     isInterfaceType(type) ||
     isUnionType(type) ||
+    isInputUnionType(type) ||
     isEnumType(type) ||
     isInputObjectType(type) ||
     isListType(type) ||
@@ -76,6 +84,21 @@ export function assertType(type: mixed): GraphQLType {
 /**
  * There are predicates for each kind of GraphQL type.
  */
+
+declare function isLiteralType(type: mixed): boolean %checks(type instanceof
+  GraphQLLiteralType);
+// eslint-disable-next-line no-redeclare
+export function isLiteralType(type) {
+  return instanceOf(type, GraphQLLiteralType);
+}
+
+export function assertLiteralType(type: mixed): GraphQLLiteralType {
+  invariant(
+    isLiteralType(type),
+    `Expected ${inspect(type)} to be a GraphQL Literal type.`,
+  );
+  return type;
+}
 
 declare function isScalarType(type: mixed): boolean %checks(type instanceof
   GraphQLScalarType);
@@ -133,6 +156,20 @@ export function assertUnionType(type: mixed): GraphQLUnionType {
   invariant(
     isUnionType(type),
     `Expected ${inspect(type)} to be a GraphQL Union type.`,
+  );
+  return type;
+}
+
+declare function isInputUnionType(type: mixed): boolean %checks(type instanceof
+  GraphQLInputUnionType);
+// eslint-disable-next-line no-redeclare
+export function isInputUnionType(type) {
+  return instanceOf(type, GraphQLInputUnionType);
+}
+export function assertInputUnionType(type: mixed): GraphQLUnionType {
+  invariant(
+    isInputUnionType(type),
+    `Expected ${String(type)} to be a GraphQL Input Union type.`,
   );
   return type;
 }
@@ -201,22 +238,28 @@ export function assertNonNullType(type: mixed): GraphQLNonNull<any> {
  * These types may be used as input types for arguments and directives.
  */
 export type GraphQLInputType =
+  | GraphQLLiteralType
   | GraphQLScalarType
   | GraphQLEnumType
   | GraphQLInputObjectType
+  | GraphQLInputUnionType
   | GraphQLList<GraphQLInputType>
   | GraphQLNonNull<
+      | GraphQLLiteralType
       | GraphQLScalarType
       | GraphQLEnumType
       | GraphQLInputObjectType
+      | GraphQLInputUnionType
       | GraphQLList<GraphQLInputType>,
     >;
 
 export function isInputType(type: mixed): boolean %checks {
   return (
+    isLiteralType(type) ||
     isScalarType(type) ||
     isEnumType(type) ||
     isInputObjectType(type) ||
+    isInputUnionType(type) ||
     (isWrappingType(type) && isInputType(type.ofType))
   );
 }
@@ -234,6 +277,7 @@ export function assertInputType(type: mixed): GraphQLInputType {
  */
 export type GraphQLOutputType =
   | GraphQLScalarType
+  | GraphQLLiteralType
   | GraphQLObjectType
   | GraphQLInterfaceType
   | GraphQLUnionType
@@ -250,6 +294,7 @@ export type GraphQLOutputType =
 
 export function isOutputType(type: mixed): boolean %checks {
   return (
+    isLiteralType(type) ||
     isScalarType(type) ||
     isObjectType(type) ||
     isInterfaceType(type) ||
@@ -270,10 +315,13 @@ export function assertOutputType(type: mixed): GraphQLOutputType {
 /**
  * These types may describe types which may be leaf values.
  */
-export type GraphQLLeafType = GraphQLScalarType | GraphQLEnumType;
+export type GraphQLLeafType =
+  | GraphQLScalarType
+  | GraphQLEnumType
+  | GraphQLLiteralType;
 
 export function isLeafType(type: mixed): boolean %checks {
-  return isScalarType(type) || isEnumType(type);
+  return isScalarType(type) || isEnumType(type) || isLiteralType(type);
 }
 
 export function assertLeafType(type: mixed): GraphQLLeafType {
@@ -423,10 +471,12 @@ export function assertWrappingType(type: mixed): GraphQLWrappingType {
  * These types can all accept null as a value.
  */
 export type GraphQLNullableType =
+  | GraphQLLiteralType
   | GraphQLScalarType
   | GraphQLObjectType
   | GraphQLInterfaceType
   | GraphQLUnionType
+  | GraphQLInputUnionType
   | GraphQLEnumType
   | GraphQLInputObjectType
   | GraphQLList<any>;
@@ -458,19 +508,23 @@ export function getNullableType(type) {
  * These named types do not include modifiers like List or NonNull.
  */
 export type GraphQLNamedType =
+  | GraphQLLiteralType
   | GraphQLScalarType
   | GraphQLObjectType
   | GraphQLInterfaceType
   | GraphQLUnionType
+  | GraphQLInputUnionType
   | GraphQLEnumType
   | GraphQLInputObjectType;
 
 export function isNamedType(type: mixed): boolean %checks {
   return (
+    isLiteralType(type) ||
     isScalarType(type) ||
     isObjectType(type) ||
     isInterfaceType(type) ||
     isUnionType(type) ||
+    isInputUnionType(type) ||
     isEnumType(type) ||
     isInputObjectType(type)
   );
@@ -1274,3 +1328,255 @@ export type GraphQLInputField = {
 };
 
 export type GraphQLInputFieldMap = ObjMap<GraphQLInputField>;
+
+/**
+ * Input Union Type Definition
+ *
+ * An input union type defines a heterogeneous set of input object types
+ * possible to fulfill an input field. The `__typename` must be specified
+ * in the input object.
+ *
+ * Example:
+ *
+ *     const PetInputType = new GraphQLInputUnionType({
+ *       name: 'PetInput',
+ *       types: [ DogInputType, CatInputType ],
+ *     });
+ *
+ */
+export class GraphQLInputUnionType {
+  name: string;
+  description: ?string;
+  astNode: ?InputUnionTypeDefinitionNode;
+  extensionASTNodes: ?$ReadOnlyArray<InputUnionTypeExtensionNode>;
+
+  _typeConfig: GraphQLInputUnionTypeConfig;
+  _types: Thunk<Array<GraphQLInputObjectType>>;
+  _typeMap: ObjMap<GraphQLInputObjectType>;
+  _discriminant: string;
+  _discriminantTypeMap: ObjMap<GraphQLInputObjectType>;
+
+  constructor(config: GraphQLInputUnionTypeConfig): void {
+    this.name = config.name;
+    this.description = config.description;
+    this.astNode = config.astNode;
+    this.extensionASTNodes = config.extensionASTNodes;
+    this._typeConfig = config;
+    this._types = defineInputTypes.bind(undefined, config);
+
+    const { discriminant, discriminantTypeMap } = this.getDiscriminant();
+    this._discriminant = discriminant;
+    this._discriminantTypeMap = discriminantTypeMap;
+
+    invariant(typeof config.name === 'string', 'Must provide name.');
+  }
+
+  resolveType(values: mixed): ?GraphQLInputObjectType {
+    // $FlowFixMe
+    const discriminantValue = values[this._discriminant];
+
+    if (!discriminantValue) {
+      return;
+    }
+
+    return this.getTypeMap()[this._discriminantTypeMap[discriminantValue]];
+  }
+
+  getDiscriminant() {
+    const types = this.getTypes();
+    const possibleDiscriminantFields: Array<{
+      type: GraphQLInputObjectType,
+      field: DiscriminantField,
+    }> = [];
+
+    // Find possible discriminant fields
+    types.forEach(type => {
+      const fields = type.getFields();
+
+      // $FlowFixMe
+      const literalFields: Array<GraphQLInputField> = Object.values(
+        fields,
+      ).filter(fieldDefinition =>
+        // $FlowFixMe
+        instanceOf(fieldDefinition.type, GraphQLLiteralType),
+      );
+
+      invariant(
+        literalFields.length === 1,
+        `${type.name} must have one, and only one GraphQLLiteralType field`,
+      );
+
+      // $FlowFixMe - literalFields array can only contain fields with GraphQLLiteralType type
+      const field: DiscriminantField = literalFields[0];
+      possibleDiscriminantFields.push({
+        type,
+        field,
+      });
+    });
+
+    // Use the first element as the valid discriminant field name
+    const validDiscriminant = possibleDiscriminantFields.shift();
+
+    const discriminantValues: ObjMap<GraphQLInputObjectType> = {
+      [validDiscriminant.field.type.name]: validDiscriminant.type,
+    };
+
+    const validDiscriminantFieldName = validDiscriminant.field.name;
+
+    // Check if all input types have the same field
+    possibleDiscriminantFields.forEach(config => {
+      invariant(
+        config.field.name === validDiscriminantFieldName,
+        `${config.type.name} has an invalid discrimanant field: ${
+          config.field.name
+        }. Did you mean ${validDiscriminantFieldName}`,
+      );
+
+      invariant(
+        !discriminantValues[config.field.type.name],
+        `Duplicate usage for Literal type ${
+          config.field.type.name
+        }. This literal has been used for ${
+          discriminantValues[config.field.type.name].name
+        }`,
+      );
+
+      discriminantValues[config.field.type.name] = config.type;
+    });
+
+    return {
+      discriminant: validDiscriminant.field.name,
+      discriminantTypeMap: discriminantValues,
+    };
+  }
+
+  getDiscriminantFieldName() {
+    return this._discriminant;
+  }
+
+  getTypeByDiscriminantValue(value: mixed) {
+    return this._discriminantTypeMap[String(value)];
+  }
+
+  getTypes(): Array<GraphQLInputObjectType> {
+    if (typeof this._types === 'function') {
+      this._types = this._types();
+    }
+    return this._types;
+  }
+  getTypeMap(): ObjMap<GraphQLInputObjectType> {
+    return this._typeMap || (this._typeMap = this._defineTypeMap());
+  }
+  _defineTypeMap(): ObjMap<GraphQLInputObjectType> {
+    const types = resolveThunk(this._typeConfig.types) || [];
+    invariant(
+      Array.isArray(types),
+      'Must provide Array of types or a function which returns ' +
+        `such an array for Input Union ${this.name}.`,
+    );
+    const resultTypeMap = Object.create(null);
+    types.forEach(type => {
+      resultTypeMap[type.name] = type;
+    });
+    return resultTypeMap;
+  }
+  toString(): string {
+    return this.name;
+  }
+  toJSON: () => string;
+  inspect: () => string;
+}
+// Also provide toJSON and inspect aliases for toString.
+GraphQLInputUnionType.prototype.toJSON = GraphQLInputUnionType.prototype.inspect =
+  GraphQLInputUnionType.prototype.toString;
+export type GraphQLInputUnionTypeConfig = {
+  name: string,
+  types: Thunk<Array<GraphQLInputObjectType>>,
+  description?: ?string,
+  astNode?: ?InputUnionTypeDefinitionNode,
+  extensionASTNodes?: ?$ReadOnlyArray<InputUnionTypeExtensionNode>,
+};
+
+type DiscriminantField = {
+  name: string,
+  type: GraphQLLiteralType,
+  defaultValue?: mixed,
+  description?: ?string,
+  astNode?: ?InputValueDefinitionNode,
+};
+
+function defineInputTypes(
+  config: GraphQLInputUnionTypeConfig,
+): Array<GraphQLInputObjectType> {
+  const types = resolveThunk(config.types) || [];
+  invariant(
+    Array.isArray(types),
+    'Must provide Array of types or a function which returns ' +
+      `such an array for Union ${config.name}.`,
+  );
+  return types;
+}
+
+/**
+ * Literal Type Definition
+ *
+ * Some leaf values of requests and input values are Literals. GraphQL serializes
+ * Literal values as strings.
+ *
+ * Example:
+ *
+ *     const MY_LITERAL_VALUE = new GraphQLLiteralType({
+ *       name: 'MY_LITERAL_VALUE'
+ *     });
+ *
+ */
+export class GraphQLLiteralType /* <T> */ {
+  name: string;
+  description: ?string;
+  astNode: ?LiteralTypeDefinitionNode;
+  extensionASTNodes: ?$ReadOnlyArray<LiteralTypeExtensionNode>;
+
+  constructor(config: GraphQLLiteralTypeConfig /* <T> */): void {
+    this.name = config.name;
+    this.description = config.description;
+    this.astNode = config.astNode;
+    this.extensionASTNodes = config.extensionASTNodes;
+
+    invariant(typeof config.name === 'string', 'Must provide name.');
+  }
+
+  serialize(value: any /* T */): string {
+    return value;
+  }
+
+  parseValue(value: mixed): string {
+    if (typeof value !== 'string') {
+      throw new TypeError(
+        `String cannot represent a non string value: ${inspect(value)}`,
+      );
+    }
+
+    if (value !== this.name) {
+      throw new TypeError(`String ${value} cannot represent ${this.name}`);
+    }
+    return value;
+  }
+
+  parseLiteral(ast: ValueNode) {
+    return (ast.kind === Kind.STRING || ast.kind === Kind.ENUM) &&
+      ast.value === this.name
+      ? ast.value
+      : undefined;
+  }
+
+  toString(): string {
+    return this.name;
+  }
+}
+
+export type GraphQLLiteralTypeConfig = {|
+  name: string,
+  description?: ?string,
+  astNode?: ?LiteralTypeDefinitionNode,
+  extensionASTNodes?: ?$ReadOnlyArray<LiteralTypeExtensionNode>,
+|};

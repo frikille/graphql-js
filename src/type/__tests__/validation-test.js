@@ -9,6 +9,7 @@ import { describe, it } from 'mocha';
 import { expect } from 'chai';
 import {
   GraphQLSchema,
+  GraphQLLiteralType,
   GraphQLScalarType,
   GraphQLObjectType,
   GraphQLInterfaceType,
@@ -58,6 +59,7 @@ const SomeInputObjectType = new GraphQLInputObjectType({
   name: 'SomeInputObject',
   fields: {
     val: { type: GraphQLString, defaultValue: 'hello' },
+    disc: { type: new GraphQLLiteralType({ name: 'LiteralType' }) },
   },
 });
 

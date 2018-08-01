@@ -88,6 +88,9 @@ function getDirectiveLocationForASTPath(ancestors) {
       case Kind.SCALAR_TYPE_DEFINITION:
       case Kind.SCALAR_TYPE_EXTENSION:
         return DirectiveLocation.SCALAR;
+      case Kind.LITERAL_TYPE_DEFINITION:
+      case Kind.LITERAL_TYPE_EXTENSION:
+        return DirectiveLocation.LITERAL;
       case Kind.OBJECT_TYPE_DEFINITION:
       case Kind.OBJECT_TYPE_EXTENSION:
         return DirectiveLocation.OBJECT;
@@ -99,6 +102,9 @@ function getDirectiveLocationForASTPath(ancestors) {
       case Kind.UNION_TYPE_DEFINITION:
       case Kind.UNION_TYPE_EXTENSION:
         return DirectiveLocation.UNION;
+      case Kind.INPUT_UNION_TYPE_DEFINITION:
+      case Kind.INPUT_UNION_TYPE_EXTENSION:
+        return DirectiveLocation.INPUT_UNION;
       case Kind.ENUM_TYPE_DEFINITION:
       case Kind.ENUM_TYPE_EXTENSION:
         return DirectiveLocation.ENUM;

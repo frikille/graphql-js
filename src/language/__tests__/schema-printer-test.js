@@ -121,6 +121,12 @@ describe('Printer: SDL document', () => {
 
       extend scalar CustomScalar @onScalar
 
+      literal CustomLiteral
+
+      literal AnnotatedScalar @onLiteral
+
+      extend literal CustomLiteral @onLiteral
+
       enum Site {
         DESKTOP
         MOBILE
@@ -155,6 +161,14 @@ describe('Printer: SDL document', () => {
       }
 
       extend input InputType @onInputObject
+
+      inputUnion InputOrAnnotated = InputType | AnnotatedInput
+
+      inputUnion AnnotatedInputUnion @onInputUnion = InputType | AnnotatedInput
+
+      extend inputUnion InputOrAnnotated = FooInputType | BarInputType
+
+      extend inputUnion InputOrAnnotated @onInputUnion
 
       directive @skip(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
 

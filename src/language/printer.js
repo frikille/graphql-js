@@ -110,6 +110,10 @@ const printDocASTReducer = {
 
   OperationTypeDefinition: ({ operation, type }) => operation + ': ' + type,
 
+  LiteralTypeDefinition: addDescription(({ name, directives }) =>
+    join(['literal', name, join(directives, ' ')], ' '),
+  ),
+
   ScalarTypeDefinition: addDescription(({ name, directives }) =>
     join(['scalar', name, join(directives, ' ')], ' '),
   ),
@@ -163,6 +167,18 @@ const printDocASTReducer = {
     ),
   ),
 
+  InputUnionTypeDefinition: addDescription(({ name, directives, types }) =>
+    join(
+      [
+        'inputUnion',
+        name,
+        join(directives, ' '),
+        types && types.length !== 0 ? '= ' + join(types, ' | ') : '',
+      ],
+      ' ',
+    ),
+  ),
+
   EnumTypeDefinition: addDescription(({ name, directives, values }) =>
     join(['enum', name, join(directives, ' '), block(values)], ' '),
   ),
@@ -189,6 +205,9 @@ const printDocASTReducer = {
   SchemaExtension: ({ directives, operationTypes }) =>
     join(['extend schema', join(directives, ' '), block(operationTypes)], ' '),
 
+  LiteralTypeExtension: ({ name, directives }) =>
+    join(['extend literal', name, join(directives, ' ')], ' '),
+
   ScalarTypeExtension: ({ name, directives }) =>
     join(['extend scalar', name, join(directives, ' ')], ' '),
 
@@ -211,6 +230,17 @@ const printDocASTReducer = {
     join(
       [
         'extend union',
+        name,
+        join(directives, ' '),
+        types && types.length !== 0 ? '= ' + join(types, ' | ') : '',
+      ],
+      ' ',
+    ),
+
+  InputUnionTypeExtension: ({ name, directives, types }) =>
+    join(
+      [
+        'extend inputUnion',
         name,
         join(directives, ' '),
         types && types.length !== 0 ? '= ' + join(types, ' | ') : '',

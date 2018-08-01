@@ -101,6 +101,7 @@ export type ASTNode =
   | InlineFragmentNode
   | FragmentDefinitionNode
   | IntValueNode
+  | LiteralValueNode
   | FloatValueNode
   | StringValueNode
   | BooleanValueNode
@@ -115,21 +116,25 @@ export type ASTNode =
   | NonNullTypeNode
   | SchemaDefinitionNode
   | OperationTypeDefinitionNode
+  | LiteralTypeDefinitionNode
   | ScalarTypeDefinitionNode
   | ObjectTypeDefinitionNode
   | FieldDefinitionNode
   | InputValueDefinitionNode
   | InterfaceTypeDefinitionNode
   | UnionTypeDefinitionNode
+  | InputUnionTypeDefinitionNode
   | EnumTypeDefinitionNode
   | EnumValueDefinitionNode
   | InputObjectTypeDefinitionNode
   | DirectiveDefinitionNode
   | SchemaExtensionNode
+  | LiteralTypeExtensionNode
   | ScalarTypeExtensionNode
   | ObjectTypeExtensionNode
   | InterfaceTypeExtensionNode
   | UnionTypeExtensionNode
+  | InputUnionTypeExtensionNode
   | EnumTypeExtensionNode
   | InputObjectTypeExtensionNode;
 
@@ -155,6 +160,7 @@ export type ASTKindToNode = {
   NullValue: NullValueNode,
   EnumValue: EnumValueNode,
   ListValue: ListValueNode,
+  LiteralValue: LiteralValueNode,
   ObjectValue: ObjectValueNode,
   ObjectField: ObjectFieldNode,
   Directive: DirectiveNode,
@@ -163,21 +169,25 @@ export type ASTKindToNode = {
   NonNullType: NonNullTypeNode,
   SchemaDefinition: SchemaDefinitionNode,
   OperationTypeDefinition: OperationTypeDefinitionNode,
+  LiteralTypeDefinition: LiteralTypeDefinitionNode,
   ScalarTypeDefinition: ScalarTypeDefinitionNode,
   ObjectTypeDefinition: ObjectTypeDefinitionNode,
   FieldDefinition: FieldDefinitionNode,
   InputValueDefinition: InputValueDefinitionNode,
   InterfaceTypeDefinition: InterfaceTypeDefinitionNode,
   UnionTypeDefinition: UnionTypeDefinitionNode,
+  InputUnionTypeDefinition: InputUnionTypeDefinitionNode,
   EnumTypeDefinition: EnumTypeDefinitionNode,
   EnumValueDefinition: EnumValueDefinitionNode,
   InputObjectTypeDefinition: InputObjectTypeDefinitionNode,
   DirectiveDefinition: DirectiveDefinitionNode,
   SchemaExtension: SchemaExtensionNode,
+  LiteralTypeExtension: LiteralTypeExtensionNode,
   ScalarTypeExtension: ScalarTypeExtensionNode,
   ObjectTypeExtension: ObjectTypeExtensionNode,
   InterfaceTypeExtension: InterfaceTypeExtensionNode,
   UnionTypeExtension: UnionTypeExtensionNode,
+  InputUnionTypeExtension: InputUnionTypeExtensionNode,
   EnumTypeExtension: EnumTypeExtensionNode,
   InputObjectTypeExtension: InputObjectTypeExtensionNode,
 };
@@ -297,6 +307,7 @@ export type ValueNode =
   | BooleanValueNode
   | NullValueNode
   | EnumValueNode
+  | LiteralValueNode
   | ListValueNode
   | ObjectValueNode;
 
@@ -332,6 +343,12 @@ export type NullValueNode = {
 
 export type EnumValueNode = {
   +kind: 'EnumValue',
+  +loc?: Location,
+  +value: string,
+};
+
+export type LiteralValueNode = {
+  +kind: 'LiteralValue',
   +loc?: Location,
   +value: string,
 };
@@ -410,12 +427,22 @@ export type OperationTypeDefinitionNode = {
 // Type Definition
 
 export type TypeDefinitionNode =
+  | LiteralTypeDefinitionNode
   | ScalarTypeDefinitionNode
   | ObjectTypeDefinitionNode
   | InterfaceTypeDefinitionNode
   | UnionTypeDefinitionNode
+  | InputUnionTypeDefinitionNode
   | EnumTypeDefinitionNode
   | InputObjectTypeDefinitionNode;
+
+export type LiteralTypeDefinitionNode = {
+  +kind: 'LiteralTypeDefinition',
+  +loc?: Location,
+  +description?: StringValueNode,
+  +name: NameNode,
+  +directives?: $ReadOnlyArray<DirectiveNode>,
+};
 
 export type ScalarTypeDefinitionNode = {
   +kind: 'ScalarTypeDefinition',
@@ -466,6 +493,15 @@ export type InterfaceTypeDefinitionNode = {
 
 export type UnionTypeDefinitionNode = {
   +kind: 'UnionTypeDefinition',
+  +loc?: Location,
+  +description?: StringValueNode,
+  +name: NameNode,
+  +directives?: $ReadOnlyArray<DirectiveNode>,
+  +types?: $ReadOnlyArray<NamedTypeNode>,
+};
+
+export type InputUnionTypeDefinitionNode = {
+  +kind: 'InputUnionTypeDefinition',
   +loc?: Location,
   +description?: StringValueNode,
   +name: NameNode,
@@ -524,12 +560,21 @@ export type SchemaExtensionNode = {
 // Type Extensions
 
 export type TypeExtensionNode =
+  | LiteralTypeExtensionNode
   | ScalarTypeExtensionNode
   | ObjectTypeExtensionNode
   | InterfaceTypeExtensionNode
   | UnionTypeExtensionNode
+  | InputUnionTypeExtensionNode
   | EnumTypeExtensionNode
   | InputObjectTypeExtensionNode;
+
+export type LiteralTypeExtensionNode = {
+  +kind: 'LiteralTypeExtension',
+  +loc?: Location,
+  +name: NameNode,
+  +directives?: $ReadOnlyArray<DirectiveNode>,
+};
 
 export type ScalarTypeExtensionNode = {
   +kind: 'ScalarTypeExtension',
@@ -557,6 +602,14 @@ export type InterfaceTypeExtensionNode = {
 
 export type UnionTypeExtensionNode = {
   +kind: 'UnionTypeExtension',
+  +loc?: Location,
+  +name: NameNode,
+  +directives?: $ReadOnlyArray<DirectiveNode>,
+  +types?: $ReadOnlyArray<NamedTypeNode>,
+};
+
+export type InputUnionTypeExtensionNode = {
+  +kind: 'InputUnionTypeExtension',
   +loc?: Location,
   +name: NameNode,
   +directives?: $ReadOnlyArray<DirectiveNode>,

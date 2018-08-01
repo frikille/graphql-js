@@ -88,6 +88,7 @@ export const QueryDocumentKeys = {
   BooleanValue: [],
   NullValue: [],
   EnumValue: [],
+  LiteralValue: [],
   ListValue: ['values'],
   ObjectValue: ['fields'],
   ObjectField: ['name', 'value'],
@@ -101,6 +102,7 @@ export const QueryDocumentKeys = {
   SchemaDefinition: ['directives', 'operationTypes'],
   OperationTypeDefinition: ['type'],
 
+  LiteralTypeDefinition: ['description', 'name', 'directives'],
   ScalarTypeDefinition: ['description', 'name', 'directives'],
   ObjectTypeDefinition: [
     'description',
@@ -119,6 +121,7 @@ export const QueryDocumentKeys = {
   ],
   InterfaceTypeDefinition: ['description', 'name', 'directives', 'fields'],
   UnionTypeDefinition: ['description', 'name', 'directives', 'types'],
+  InputUnionTypeDefinition: ['description', 'name', 'directives', 'types'],
   EnumTypeDefinition: ['description', 'name', 'directives', 'values'],
   EnumValueDefinition: ['description', 'name', 'directives'],
   InputObjectTypeDefinition: ['description', 'name', 'directives', 'fields'],
@@ -127,10 +130,12 @@ export const QueryDocumentKeys = {
 
   SchemaExtension: ['directives', 'operationTypes'],
 
+  LiteralTypeExtension: ['name', 'directives'],
   ScalarTypeExtension: ['name', 'directives'],
   ObjectTypeExtension: ['name', 'interfaces', 'directives', 'fields'],
   InterfaceTypeExtension: ['name', 'directives', 'fields'],
   UnionTypeExtension: ['name', 'directives', 'types'],
+  InputUnionTypeExtension: ['name', 'directives', 'types'],
   EnumTypeExtension: ['name', 'directives', 'values'],
   InputObjectTypeExtension: ['name', 'directives', 'fields'],
 };

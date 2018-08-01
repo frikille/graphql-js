@@ -44,22 +44,26 @@ import type {
   TypeSystemDefinitionNode,
   SchemaDefinitionNode,
   OperationTypeDefinitionNode,
+  LiteralTypeDefinitionNode,
   ScalarTypeDefinitionNode,
   ObjectTypeDefinitionNode,
   FieldDefinitionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   UnionTypeDefinitionNode,
+  InputUnionTypeDefinitionNode,
   EnumTypeDefinitionNode,
   EnumValueDefinitionNode,
   InputObjectTypeDefinitionNode,
   DirectiveDefinitionNode,
   TypeSystemExtensionNode,
   SchemaExtensionNode,
+  LiteralTypeExtensionNode,
   ScalarTypeExtensionNode,
   ObjectTypeExtensionNode,
   InterfaceTypeExtensionNode,
   UnionTypeExtensionNode,
+  InputUnionTypeExtensionNode,
   EnumTypeExtensionNode,
   InputObjectTypeExtensionNode,
 } from './ast';
@@ -224,10 +228,12 @@ function parseDefinition(lexer: Lexer<*>): DefinitionNode {
       case 'fragment':
         return parseExecutableDefinition(lexer);
       case 'schema':
+      case 'literal':
       case 'scalar':
       case 'type':
       case 'interface':
       case 'union':
+      case 'inputUnion':
       case 'enum':
       case 'input':
       case 'directive':
@@ -773,6 +779,8 @@ function parseTypeSystemDefinition(lexer: Lexer<*>): TypeSystemDefinitionNode {
     switch (keywordToken.value) {
       case 'schema':
         return parseSchemaDefinition(lexer);
+      case 'literal':
+        return parseLiteralTypeDefinition(lexer);
       case 'scalar':
         return parseScalarTypeDefinition(lexer);
       case 'type':
@@ -781,6 +789,8 @@ function parseTypeSystemDefinition(lexer: Lexer<*>): TypeSystemDefinitionNode {
         return parseInterfaceTypeDefinition(lexer);
       case 'union':
         return parseUnionTypeDefinition(lexer);
+      case 'inputUnion':
+        return parseInputUnionTypeDefinition(lexer);
       case 'enum':
         return parseEnumTypeDefinition(lexer);
       case 'input':
@@ -841,6 +851,26 @@ function parseOperationTypeDefinition(
     kind: Kind.OPERATION_TYPE_DEFINITION,
     operation,
     type,
+    loc: loc(lexer, start),
+  };
+}
+
+/**
+ * LiteralTypeDefinition : Description? literal Name Directives[Const]?
+ */
+function parseLiteralTypeDefinition(
+  lexer: Lexer<*>,
+): LiteralTypeDefinitionNode {
+  const start = lexer.token;
+  const description = parseDescription(lexer);
+  expectKeyword(lexer, 'literal');
+  const name = parseName(lexer);
+  const directives = parseDirectives(lexer, true);
+  return {
+    kind: Kind.LITERAL_TYPE_DEFINITION,
+    description,
+    name,
+    directives,
     loc: loc(lexer, start),
   };
 }
@@ -1033,6 +1063,29 @@ function parseUnionTypeDefinition(lexer: Lexer<*>): UnionTypeDefinitionNode {
 }
 
 /**
+ * InputUnionTypeDefinition :
+ *   - Description? inputUnion Name Directives[Const]? UnionMemberTypes?
+ */
+function parseInputUnionTypeDefinition(
+  lexer: Lexer<*>,
+): InputUnionTypeDefinitionNode {
+  const start = lexer.token;
+  const description = parseDescription(lexer);
+  expectKeyword(lexer, 'inputUnion');
+  const name = parseName(lexer);
+  const directives = parseDirectives(lexer, true);
+  const types = parseUnionMemberTypes(lexer);
+  return {
+    kind: Kind.INPUT_UNION_TYPE_DEFINITION,
+    description,
+    name,
+    directives,
+    types,
+    loc: loc(lexer, start),
+  };
+}
+
+/**
  * UnionMemberTypes :
  *   - = `|`? NamedType
  *   - UnionMemberTypes | NamedType
@@ -1145,10 +1198,12 @@ function parseInputFieldsDefinition(
  *   - TypeExtension
  *
  * TypeExtension :
+ *   - LiteralTypeExtension
  *   - ScalarTypeExtension
  *   - ObjectTypeExtension
  *   - InterfaceTypeExtension
  *   - UnionTypeExtension
+ *   - InputUnionTypeExtension
  *   - EnumTypeExtension
  *   - InputObjectTypeDefinition
  */
@@ -1159,6 +1214,8 @@ function parseTypeSystemExtension(lexer: Lexer<*>): TypeSystemExtensionNode {
     switch (keywordToken.value) {
       case 'schema':
         return parseSchemaExtension(lexer);
+      case 'literal':
+        return parseLiteralTypeExtension(lexer);
       case 'scalar':
         return parseScalarTypeExtension(lexer);
       case 'type':
@@ -1167,6 +1224,8 @@ function parseTypeSystemExtension(lexer: Lexer<*>): TypeSystemExtensionNode {
         return parseInterfaceTypeExtension(lexer);
       case 'union':
         return parseUnionTypeExtension(lexer);
+      case 'inputUnion':
+        return parseInputUnionTypeExtension(lexer);
       case 'enum':
         return parseEnumTypeExtension(lexer);
       case 'input':
@@ -1221,6 +1280,27 @@ function parseScalarTypeExtension(lexer: Lexer<*>): ScalarTypeExtensionNode {
   }
   return {
     kind: Kind.SCALAR_TYPE_EXTENSION,
+    name,
+    directives,
+    loc: loc(lexer, start),
+  };
+}
+
+/**
+ * LiteralTypeExtension :
+ *   - extend literal Name Directives[Const]
+ */
+function parseLiteralTypeExtension(lexer: Lexer<*>): LiteralTypeExtensionNode {
+  const start = lexer.token;
+  expectKeyword(lexer, 'extend');
+  expectKeyword(lexer, 'literal');
+  const name = parseName(lexer);
+  const directives = parseDirectives(lexer, true);
+  if (directives.length === 0) {
+    throw unexpected(lexer);
+  }
+  return {
+    kind: Kind.LITERAL_TYPE_EXTENSION,
     name,
     directives,
     loc: loc(lexer, start),
@@ -1301,6 +1381,32 @@ function parseUnionTypeExtension(lexer: Lexer<*>): UnionTypeExtensionNode {
   }
   return {
     kind: Kind.UNION_TYPE_EXTENSION,
+    name,
+    directives,
+    types,
+    loc: loc(lexer, start),
+  };
+}
+
+/**
+ * InputUnionTypeExtension :
+ *   - extend inputUnion Name Directives[Const]? UnionMemberTypes
+ *   - extend inputUnion Name Directives[Const]
+ */
+function parseInputUnionTypeExtension(
+  lexer: Lexer<*>,
+): InputUnionTypeExtensionNode {
+  const start = lexer.token;
+  expectKeyword(lexer, 'extend');
+  expectKeyword(lexer, 'inputUnion');
+  const name = parseName(lexer);
+  const directives = parseDirectives(lexer, true);
+  const types = parseUnionMemberTypes(lexer);
+  if (directives.length === 0 && types.length === 0) {
+    throw unexpected(lexer);
+  }
+  return {
+    kind: Kind.INPUT_UNION_TYPE_EXTENSION,
     name,
     directives,
     types,

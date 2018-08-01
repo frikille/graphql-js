@@ -830,4 +830,26 @@ input Hello {
       ],
     );
   });
+
+  it('inputUnion object', () => {
+    const doc = parse('inputUnion Hello = Wo | Rld');
+
+    expect(toJSONDeep(doc)).to.deep.equal({
+      kind: 'Document',
+      definitions: [
+        {
+          kind: 'InputUnionTypeDefinition',
+          name: nameNode('Hello', { start: 11, end: 16 }),
+          description: undefined,
+          directives: [],
+          types: [
+            typeNode('Wo', { start: 19, end: 21 }),
+            typeNode('Rld', { start: 24, end: 27 }),
+          ],
+          loc: { start: 0, end: 27 },
+        },
+      ],
+      loc: { start: 0, end: 27 },
+    });
+  });
 });

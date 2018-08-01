@@ -29,6 +29,7 @@ export const Kind = Object.freeze({
   FRAGMENT_DEFINITION: 'FragmentDefinition',
 
   // Values
+  LITERAL: 'LiteralValue',
   INT: 'IntValue',
   FLOAT: 'FloatValue',
   STRING: 'StringValue',
@@ -52,12 +53,14 @@ export const Kind = Object.freeze({
   OPERATION_TYPE_DEFINITION: 'OperationTypeDefinition',
 
   // Type Definitions
+  LITERAL_TYPE_DEFINITION: 'LiteralTypeDefinition',
   SCALAR_TYPE_DEFINITION: 'ScalarTypeDefinition',
   OBJECT_TYPE_DEFINITION: 'ObjectTypeDefinition',
   FIELD_DEFINITION: 'FieldDefinition',
   INPUT_VALUE_DEFINITION: 'InputValueDefinition',
   INTERFACE_TYPE_DEFINITION: 'InterfaceTypeDefinition',
   UNION_TYPE_DEFINITION: 'UnionTypeDefinition',
+  INPUT_UNION_TYPE_DEFINITION: 'InputUnionTypeDefinition',
   ENUM_TYPE_DEFINITION: 'EnumTypeDefinition',
   ENUM_VALUE_DEFINITION: 'EnumValueDefinition',
   INPUT_OBJECT_TYPE_DEFINITION: 'InputObjectTypeDefinition',
@@ -69,10 +72,12 @@ export const Kind = Object.freeze({
   SCHEMA_EXTENSION: 'SchemaExtension',
 
   // Type Extensions
+  LITERAL_TYPE_EXTENSION: 'LiteralTypeExtension',
   SCALAR_TYPE_EXTENSION: 'ScalarTypeExtension',
   OBJECT_TYPE_EXTENSION: 'ObjectTypeExtension',
   INTERFACE_TYPE_EXTENSION: 'InterfaceTypeExtension',
   UNION_TYPE_EXTENSION: 'UnionTypeExtension',
+  INPUT_UNION_TYPE_EXTENSION: 'InputUnionTypeExtension',
   ENUM_TYPE_EXTENSION: 'EnumTypeExtension',
   INPUT_OBJECT_TYPE_EXTENSION: 'InputObjectTypeExtension',
 });

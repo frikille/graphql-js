@@ -13,14 +13,16 @@ import objectValues from '../jsutils/objectValues';
 import type { ObjMap } from '../jsutils/ObjMap';
 import { Kind } from '../language/kinds';
 import {
+  isLiteralType,
   isScalarType,
   isEnumType,
   isInputObjectType,
+  isInputUnionType,
   isListType,
   isNonNullType,
 } from '../type/definition';
 import type { GraphQLInputType } from '../type/definition';
-import type { ValueNode } from '../language/ast';
+import type { ValueNode, ObjectValueNode } from '../language/ast';
 
 /**
  * Produces a JavaScript value given a GraphQL Value AST.
@@ -37,6 +39,7 @@ import type { ValueNode } from '../language/ast';
  * | List                 | Array         |
  * | Boolean              | Boolean       |
  * | String               | String        |
+ * | Literal              | String        |
  * | Int / Float          | Number        |
  * | Enum Value           | Mixed         |
  * | NullValue            | null          |
@@ -111,6 +114,36 @@ export function valueFromAST(
     return [coercedValue];
   }
 
+  if (isInputUnionType(type)) {
+    if (valueNode.kind !== Kind.OBJECT) {
+      return; // Invalid: intentionally return no value.
+    }
+    const fieldNodes = keyMap(
+      (valueNode: ObjectValueNode).fields,
+      field => field.name.value,
+    );
+    // console.log(fieldNodes);
+    const discriminantField = type.getDiscriminantFieldName();
+    const discriminantFieldAST = fieldNodes[discriminantField];
+    if (!discriminantFieldAST) {
+      return; // Invalid: intentionally return no value;
+    }
+
+    const inputType = type.getTypeByDiscriminantValue(
+      // $FlowFixMe
+      discriminantFieldAST.value.value,
+    );
+
+    if (!inputType) {
+      return; // Invalid: intentionally return no value.
+    }
+
+    const fields = inputType.getFields();
+    const initialObj = Object.create(null);
+
+    return coerceObject(fields, fieldNodes, variables, initialObj);
+  }
+
   if (isInputObjectType(type)) {
     if (valueNode.kind !== Kind.OBJECT) {
       return; // Invalid: intentionally return no value.
@@ -136,6 +169,10 @@ export function valueFromAST(
       coercedObj[field.name] = fieldValue;
     }
     return coercedObj;
+  }
+
+  if (isLiteralType(type)) {
+    return type.parseLiteral(valueNode);
   }
 
   if (isEnumType(type)) {
@@ -176,4 +213,32 @@ function isMissingVariable(valueNode, variables) {
     valueNode.kind === Kind.VARIABLE &&
     (!variables || isInvalid(variables[valueNode.name.value]))
   );
+}
+
+function coerceObject(
+  fields,
+  fieldNodes,
+  variables,
+  coercedObj = Object.create(null),
+) {
+  const fieldNames = Object.keys(fields);
+  for (let i = 0; i < fieldNames.length; i++) {
+    const fieldName = fieldNames[i];
+    const field = fields[fieldName];
+    const fieldNode = fieldNodes[fieldName];
+    if (!fieldNode || isMissingVariable(fieldNode.value, variables)) {
+      if (!isInvalid(field.defaultValue)) {
+        coercedObj[fieldName] = field.defaultValue;
+      } else if (isNonNullType(field.type)) {
+        return; // Invalid: intentionally return no value.
+      }
+      continue;
+    }
+    const fieldValue = valueFromAST(fieldNode.value, field.type, variables);
+    if (isInvalid(fieldValue)) {
+      return; // Invalid: intentionally return no value.
+    }
+    coercedObj[fieldName] = fieldValue;
+  }
+  return coercedObj;
 }

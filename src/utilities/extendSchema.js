@@ -27,20 +27,24 @@ import type {
 } from '../type/definition';
 
 import {
+  isLiteralType,
   isScalarType,
   isObjectType,
   isInterfaceType,
   isUnionType,
+  isInputUnionType,
   isListType,
   isNonNullType,
   isEnumType,
   isInputObjectType,
   GraphQLList,
   GraphQLNonNull,
+  GraphQLLiteralType,
   GraphQLScalarType,
   GraphQLObjectType,
   GraphQLInterfaceType,
   GraphQLUnionType,
+  GraphQLInputUnionType,
   GraphQLEnumType,
   GraphQLInputObjectType,
 } from '../type/definition';
@@ -138,6 +142,8 @@ export function extendSchema(
       case Kind.UNION_TYPE_DEFINITION:
       case Kind.SCALAR_TYPE_DEFINITION:
       case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+      case Kind.INPUT_UNION_TYPE_DEFINITION:
+      case Kind.LITERAL_TYPE_DEFINITION:
         // Sanity check that none of the defined types conflict with the
         // schema's existing types.
         const typeName = def.name.value;
@@ -156,6 +162,8 @@ export function extendSchema(
       case Kind.ENUM_TYPE_EXTENSION:
       case Kind.INPUT_OBJECT_TYPE_EXTENSION:
       case Kind.UNION_TYPE_EXTENSION:
+      case Kind.LITERAL_TYPE_EXTENSION:
+      case Kind.INPUT_UNION_TYPE_EXTENSION:
         // Sanity check that this type extension exists within the
         // schema's existing types.
         const extendedTypeName = def.name.value;
@@ -309,12 +317,16 @@ export function extendSchema(
     if (!extendTypeCache[name]) {
       if (isScalarType(type)) {
         extendTypeCache[name] = extendScalarType(type);
+      } else if (isLiteralType(type)) {
+        extendTypeCache[name] = extendLiteralType(type);
       } else if (isObjectType(type)) {
         extendTypeCache[name] = extendObjectType(type);
       } else if (isInterfaceType(type)) {
         extendTypeCache[name] = extendInterfaceType(type);
       } else if (isUnionType(type)) {
         extendTypeCache[name] = extendUnionType(type);
+      } else if (isInputUnionType(type)) {
+        extendTypeCache[name] = extendInputUnionType(type);
       } else if (isEnumType(type)) {
         extendTypeCache[name] = extendEnumType(type);
       } else if (isInputObjectType(type)) {
@@ -455,6 +467,21 @@ export function extendSchema(
     });
   }
 
+  function extendLiteralType(type: GraphQLLiteralType): GraphQLLiteralType {
+    const name = type.name;
+    const extensionASTNodes = typeExtensionsMap[name]
+      ? type.extensionASTNodes
+        ? type.extensionASTNodes.concat(typeExtensionsMap[name])
+        : typeExtensionsMap[name]
+      : type.extensionASTNodes;
+    return new GraphQLLiteralType({
+      name,
+      description: type.description,
+      astNode: type.astNode,
+      extensionASTNodes,
+    });
+  }
+
   function extendObjectType(type: GraphQLObjectType): GraphQLObjectType {
     const name = type.name;
     const extensionASTNodes = typeExtensionsMap[name]
@@ -527,6 +554,44 @@ export function extendSchema(
   function extendPossibleTypes(
     type: GraphQLUnionType,
   ): Array<GraphQLObjectType> {
+    const possibleTypes = type.getTypes().map(extendNamedType);
+
+    // If there are any extensions to the union, apply those here.
+    const extensions = typeExtensionsMap[type.name];
+    if (extensions) {
+      for (const extension of extensions) {
+        for (const namedType of extension.types) {
+          // Note: While this could make early assertions to get the correctly
+          // typed values, that would throw immediately while type system
+          // validation with validateSchema() will produce more actionable results.
+          possibleTypes.push((astBuilder.buildType(namedType): any));
+        }
+      }
+    }
+    return possibleTypes;
+  }
+
+  function extendInputUnionType(
+    type: GraphQLInputUnionType,
+  ): GraphQLInputUnionType {
+    const name = type.name;
+    const extensionASTNodes = typeExtensionsMap[name]
+      ? type.extensionASTNodes
+        ? type.extensionASTNodes.concat(typeExtensionsMap[name])
+        : typeExtensionsMap[name]
+      : type.extensionASTNodes;
+    return new GraphQLInputUnionType({
+      name,
+      description: type.description,
+      types: () => extendPossibleInputTypes(type),
+      astNode: type.astNode,
+      extensionASTNodes,
+    });
+  }
+
+  function extendPossibleInputTypes(
+    type: GraphQLInputUnionType,
+  ): Array<GraphQLInputObjectType> {
     const possibleTypes = type.getTypes().map(extendNamedType);
 
     // If there are any extensions to the union, apply those here.

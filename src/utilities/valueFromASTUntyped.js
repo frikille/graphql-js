@@ -43,6 +43,7 @@ export function valueFromASTUntyped(
     case Kind.STRING:
     case Kind.ENUM:
     case Kind.BOOLEAN:
+    case Kind.LITERAL:
       return valueNode.value;
     case Kind.LIST:
       return valueNode.values.map(node => valueFromASTUntyped(node, variables));

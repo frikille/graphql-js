@@ -14,20 +14,24 @@ import { astFromValue } from '../utilities/astFromValue';
 import { print } from '../language/printer';
 import type { GraphQLSchema } from '../type/schema';
 import {
+  isLiteralType,
   isScalarType,
   isObjectType,
   isInterfaceType,
   isUnionType,
+  isInputUnionType,
   isEnumType,
   isInputObjectType,
 } from '../type/definition';
 import type {
   GraphQLNamedType,
+  GraphQLLiteralType,
   GraphQLScalarType,
   GraphQLEnumType,
   GraphQLObjectType,
   GraphQLInterfaceType,
   GraphQLUnionType,
+  GraphQLInputUnionType,
   GraphQLInputObjectType,
 } from '../type/definition';
 import { GraphQLString, isSpecifiedScalarType } from '../type/scalars';
@@ -152,7 +156,9 @@ function isSchemaOfCommonNames(schema: GraphQLSchema): boolean {
 }
 
 export function printType(type: GraphQLNamedType, options?: Options): string {
-  if (isScalarType(type)) {
+  if (isLiteralType(type)) {
+    return printLiteral(type, options);
+  } else if (isScalarType(type)) {
     return printScalar(type, options);
   } else if (isObjectType(type)) {
     return printObject(type, options);
@@ -160,6 +166,8 @@ export function printType(type: GraphQLNamedType, options?: Options): string {
     return printInterface(type, options);
   } else if (isUnionType(type)) {
     return printUnion(type, options);
+  } else if (isInputUnionType(type)) {
+    return printInputUnion(type, options);
   } else if (isEnumType(type)) {
     return printEnum(type, options);
   } else if (isInputObjectType(type)) {
@@ -167,6 +175,10 @@ export function printType(type: GraphQLNamedType, options?: Options): string {
   }
   /* istanbul ignore next */
   throw new Error(`Unknown type: ${(type: empty)}.`);
+}
+
+function printLiteral(type: GraphQLLiteralType, options): string {
+  return printDescription(options, type) + `literal ${type.name}`;
 }
 
 function printScalar(type: GraphQLScalarType, options): string {
@@ -201,6 +213,13 @@ function printUnion(type: GraphQLUnionType, options): string {
   return (
     printDescription(options, type) +
     `union ${type.name} = ${type.getTypes().join(' | ')}`
+  );
+}
+
+function printInputUnion(type: GraphQLInputUnionType, options): string {
+  return (
+    printDescription(options, type) +
+    `inputUnion ${type.name} = ${type.getTypes().join(' | ')}`
   );
 }
 

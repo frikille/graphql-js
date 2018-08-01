@@ -132,14 +132,17 @@ export type IntrospectionSchema = {|
 |};
 
 export type IntrospectionType =
+  | IntrospectionLiteralType
   | IntrospectionScalarType
   | IntrospectionObjectType
   | IntrospectionInterfaceType
   | IntrospectionUnionType
+  | IntrospectionInputUnionType
   | IntrospectionEnumType
   | IntrospectionInputObjectType;
 
 export type IntrospectionOutputType =
+  | IntrospectionLiteralType
   | IntrospectionScalarType
   | IntrospectionObjectType
   | IntrospectionInterfaceType
@@ -149,7 +152,14 @@ export type IntrospectionOutputType =
 export type IntrospectionInputType =
   | IntrospectionScalarType
   | IntrospectionEnumType
-  | IntrospectionInputObjectType;
+  | IntrospectionInputObjectType
+  | IntrospectionInputUnionType;
+
+export type IntrospectionLiteralType = {
+  +kind: 'LITERAL',
+  +name: string,
+  +description?: ?string,
+};
 
 export type IntrospectionScalarType = {
   +kind: 'SCALAR',
@@ -184,6 +194,13 @@ export type IntrospectionUnionType = {
   +possibleTypes: $ReadOnlyArray<
     IntrospectionNamedTypeRef<IntrospectionObjectType>,
   >,
+};
+
+export type IntrospectionInputUnionType = {
+  +kind: 'INPUT_UNION',
+  +name: string,
+  +description?: ?string,
+  +possibleTypes: $ReadOnlyArray<IntrospectionInputObjectType>,
 };
 
 export type IntrospectionEnumType = {

@@ -15,11 +15,13 @@ import suggestionList from '../jsutils/suggestionList';
 import { GraphQLError } from '../error';
 import type { ASTNode } from '../language/ast';
 import {
+  isLiteralType,
   isScalarType,
   isEnumType,
   isInputObjectType,
   isListType,
   isNonNullType,
+  isInputUnionType,
 } from '../type/definition';
 import type { GraphQLInputType } from '../type/definition';
 
@@ -60,6 +62,28 @@ export function coerceValue(
   if (value == null) {
     // Explicitly return the value null.
     return ofValue(null);
+  }
+
+  if (isLiteralType(type)) {
+    try {
+      const parseResult = type.parseValue(value);
+      if (isInvalid(parseResult)) {
+        return ofErrors([
+          coercionError(`Expected type ${type.name}`, blameNode, path),
+        ]);
+      }
+      return ofValue(parseResult);
+    } catch (error) {
+      return ofErrors([
+        coercionError(
+          `Expected type ${type.name}`,
+          blameNode,
+          path,
+          error.message,
+          error,
+        ),
+      ]);
+    }
   }
 
   if (isScalarType(type)) {
@@ -132,7 +156,7 @@ export function coerceValue(
     return coercedItem.errors ? coercedItem : ofValue([coercedItem.value]);
   }
 
-  if (isInputObjectType(type)) {
+  if (isInputUnionType(type)) {
     if (typeof value !== 'object') {
       return ofErrors([
         coercionError(
@@ -142,67 +166,24 @@ export function coerceValue(
         ),
       ]);
     }
-    let errors;
-    const coercedValue = {};
-    const fields = type.getFields();
 
-    // Ensure every defined field is valid.
-    for (const fieldName in fields) {
-      if (hasOwnProperty.call(fields, fieldName)) {
-        const field = fields[fieldName];
-        const fieldValue = value[fieldName];
-        if (isInvalid(fieldValue)) {
-          if (!isInvalid(field.defaultValue)) {
-            coercedValue[fieldName] = field.defaultValue;
-          } else if (isNonNullType(field.type)) {
-            errors = add(
-              errors,
-              coercionError(
-                `Field ${printPath(atPath(path, fieldName))} of required ` +
-                  `type ${inspect(field.type)} was not provided`,
-                blameNode,
-              ),
-            );
-          }
-        } else {
-          const coercedField = coerceValue(
-            fieldValue,
-            field.type,
-            blameNode,
-            atPath(path, fieldName),
-          );
-          if (coercedField.errors) {
-            errors = add(errors, coercedField.errors);
-          } else if (!errors) {
-            coercedValue[fieldName] = coercedField.value;
-          }
-        }
-      }
+    const inputType = type.resolveType(value);
+
+    if (!inputType) {
+      return ofErrors([
+        coercionError(
+          `Could not resolve type ${type.name} to a valid input object type`,
+          blameNode,
+          path,
+        ),
+      ]);
     }
 
-    // Ensure every provided field is defined.
-    for (const fieldName in value) {
-      if (hasOwnProperty.call(value, fieldName)) {
-        if (!fields[fieldName]) {
-          const suggestions = suggestionList(fieldName, Object.keys(fields));
-          const didYouMean =
-            suggestions.length !== 0
-              ? `did you mean ${orList(suggestions)}?`
-              : undefined;
-          errors = add(
-            errors,
-            coercionError(
-              `Field "${fieldName}" is not defined by type ${type.name}`,
-              blameNode,
-              path,
-              didYouMean,
-            ),
-          );
-        }
-      }
-    }
+    return coerceInputObject(inputType, value, path, blameNode);
+  }
 
-    return errors ? ofErrors(errors) : ofValue(coercedValue);
+  if (isInputObjectType(type)) {
+    return coerceInputObject(type, value, path, blameNode);
   }
 
   /* istanbul ignore next */
@@ -255,3 +236,76 @@ function printPath(path) {
 }
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
+
+function coerceInputObject(type, value, path, blameNode, coercedValue = {}) {
+  if (typeof value !== 'object') {
+    return ofErrors([
+      coercionError(
+        `Expected type ${type.name} to be an object`,
+        blameNode,
+        path,
+      ),
+    ]);
+  }
+  let errors;
+
+  const fields = type.getFields();
+
+  // Ensure every defined field is valid.
+  for (const fieldName in fields) {
+    if (hasOwnProperty.call(fields, fieldName)) {
+      const field = fields[fieldName];
+      const fieldValue = value[fieldName];
+      if (isInvalid(fieldValue)) {
+        if (!isInvalid(field.defaultValue)) {
+          coercedValue[fieldName] = field.defaultValue;
+        } else if (isNonNullType(field.type)) {
+          errors = add(
+            errors,
+            coercionError(
+              `Field ${printPath(atPath(path, fieldName))} of required ` +
+                `type ${inspect(field.type)} was not provided`,
+              blameNode,
+            ),
+          );
+        }
+      } else {
+        const coercedField = coerceValue(
+          fieldValue,
+          field.type,
+          blameNode,
+          atPath(path, fieldName),
+        );
+        if (coercedField.errors) {
+          errors = add(errors, coercedField.errors);
+        } else if (!errors) {
+          coercedValue[fieldName] = coercedField.value;
+        }
+      }
+    }
+  }
+
+  // Ensure every provided field is defined.
+  for (const fieldName in value) {
+    if (hasOwnProperty.call(value, fieldName)) {
+      if (!fields[fieldName]) {
+        const suggestions = suggestionList(fieldName, Object.keys(fields));
+        const didYouMean =
+          suggestions.length !== 0
+            ? `did you mean ${orList(suggestions)}?`
+            : undefined;
+        errors = add(
+          errors,
+          coercionError(
+            `Field "${fieldName}" is not defined by type ${type.name}`,
+            blameNode,
+            path,
+            didYouMean,
+          ),
+        );
+      }
+    }
+  }
+
+  return errors ? ofErrors(errors) : ofValue(coercedValue);
+}

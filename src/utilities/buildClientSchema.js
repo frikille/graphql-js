@@ -17,10 +17,13 @@ import { GraphQLSchema } from '../type/schema';
 import {
   isInputType,
   isOutputType,
+  isInputObjectType,
+  GraphQLLiteralType,
   GraphQLScalarType,
   GraphQLObjectType,
   GraphQLInterfaceType,
   GraphQLUnionType,
+  GraphQLInputUnionType,
   GraphQLEnumType,
   GraphQLInputObjectType,
   GraphQLList,
@@ -46,10 +49,12 @@ import { specifiedScalarTypes } from '../type/scalars';
 import type {
   IntrospectionQuery,
   IntrospectionType,
+  IntrospectionLiteralType,
   IntrospectionScalarType,
   IntrospectionObjectType,
   IntrospectionInterfaceType,
   IntrospectionUnionType,
+  IntrospectionInputUnionType,
   IntrospectionEnumType,
   IntrospectionInputObjectType,
   IntrospectionTypeRef,
@@ -147,6 +152,17 @@ export function buildClientSchema(
     return type;
   }
 
+  function getInputObjectType(
+    typeRef: IntrospectionInputObjectType,
+  ): GraphQLInputObjectType {
+    const type = getType(typeRef);
+    invariant(
+      isInputObjectType(type),
+      'Introspection must provide input type for arguments.',
+    );
+    return type;
+  }
+
   function getOutputType(
     typeRef: IntrospectionOutputTypeRef,
   ): GraphQLOutputType {
@@ -177,6 +193,8 @@ export function buildClientSchema(
   function buildType(type: IntrospectionType): GraphQLNamedType {
     if (type && type.name && type.kind) {
       switch (type.kind) {
+        case TypeKind.LITERAL:
+          return buildLiteralDef(type);
         case TypeKind.SCALAR:
           return buildScalarDef(type);
         case TypeKind.OBJECT:
@@ -185,6 +203,8 @@ export function buildClientSchema(
           return buildInterfaceDef(type);
         case TypeKind.UNION:
           return buildUnionDef(type);
+        case TypeKind.INPUT_UNION:
+          return buildInputUnionDef(type);
         case TypeKind.ENUM:
           return buildEnumDef(type);
         case TypeKind.INPUT_OBJECT:
@@ -196,6 +216,15 @@ export function buildClientSchema(
         'introspection query is used in order to build a client schema:' +
         JSON.stringify(type),
     );
+  }
+
+  function buildLiteralDef(
+    literalIntrospection: IntrospectionLiteralType,
+  ): GraphQLLiteralType {
+    return new GraphQLLiteralType({
+      name: literalIntrospection.name,
+      description: literalIntrospection.description,
+    });
   }
 
   function buildScalarDef(
@@ -248,6 +277,22 @@ export function buildClientSchema(
       name: unionIntrospection.name,
       description: unionIntrospection.description,
       types: unionIntrospection.possibleTypes.map(getObjectType),
+    });
+  }
+
+  function buildInputUnionDef(
+    inputUnionIntrospection: IntrospectionInputUnionType,
+  ): GraphQLInputUnionType {
+    if (!inputUnionIntrospection.possibleTypes) {
+      throw new Error(
+        'Introspection result missing possibleTypes: ' +
+          JSON.stringify(inputUnionIntrospection),
+      );
+    }
+    return new GraphQLInputUnionType({
+      name: inputUnionIntrospection.name,
+      description: inputUnionIntrospection.description,
+      types: inputUnionIntrospection.possibleTypes.map(getInputObjectType),
     });
   }
 

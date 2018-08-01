@@ -17,9 +17,11 @@ import type { ValueNode } from '../language/ast';
 import { Kind } from '../language/kinds';
 import type { GraphQLInputType } from '../type/definition';
 import {
+  isLiteralType,
   isScalarType,
   isEnumType,
   isInputObjectType,
+  isInputUnionType,
   isListType,
   isNonNullType,
 } from '../type/definition';
@@ -78,6 +80,13 @@ export function astFromValue(value: mixed, type: GraphQLInputType): ?ValueNode {
     return astFromValue(value, itemType);
   }
 
+  // Ensure the input value is valid
+  if (isInputUnionType(type)) {
+    throw new TypeError(
+      'Input Unions are not supported as a direct input value',
+    );
+  }
+
   // Populate the fields of the input object by creating ASTs from each value
   // in the JavaScript object according to the fields in the input type.
   if (isInputObjectType(type)) {
@@ -99,7 +108,7 @@ export function astFromValue(value: mixed, type: GraphQLInputType): ?ValueNode {
     return { kind: Kind.OBJECT, fields: fieldNodes };
   }
 
-  if (isScalarType(type) || isEnumType(type)) {
+  if (isScalarType(type) || isEnumType(type) || isLiteralType(type)) {
     // Since value is an internally represented value, it must be serialized
     // to an externally represented value before converting into an AST.
     const serialized = type.serialize(value);

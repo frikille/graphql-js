@@ -679,6 +679,9 @@ describe('Type System Printer', () => {
         """Location adjacent to a schema definition."""
         SCHEMA
 
+        """Location adjacent to a literal definition."""
+        LITERAL
+
         """Location adjacent to a scalar definition."""
         SCALAR
 
@@ -696,6 +699,9 @@ describe('Type System Printer', () => {
 
         """Location adjacent to a union definition."""
         UNION
+
+        """Location adjacent to an input union definition."""
+        INPUT_UNION
 
         """Location adjacent to an enum definition."""
         ENUM
@@ -782,10 +788,10 @@ describe('Type System Printer', () => {
       types in GraphQL as represented by the \`__TypeKind\` enum.
 
       Depending on the kind of a type, certain fields describe information about that
-      type. Scalar types provide no information beyond a name and description, while
-      Enum types provide their values. Object and Interface types provide the fields
-      they describe. Abstract types, Union and Interface, provide the Object types
-      possible at runtime. List and NonNull types compose other types.
+      type. Scalar and Literal types provide no information beyond a name and
+      description, while Enum types provide their values. Object and Interface types
+      provide the fields they describe. Abstract types, Union and Interface, provide
+      the Object types possible at runtime. List and NonNull types compose other types.
       """
       type __Type {
         kind: __TypeKind!
@@ -801,6 +807,9 @@ describe('Type System Printer', () => {
 
       """An enum describing what kind of type a given \`__Type\` is."""
       enum __TypeKind {
+        """Indicates this type is a literal."""
+        LITERAL
+
         """Indicates this type is a scalar."""
         SCALAR
 
@@ -816,6 +825,11 @@ describe('Type System Printer', () => {
 
         """Indicates this type is a union. \`possibleTypes\` is a valid field."""
         UNION
+
+        """
+        Indicates this type is an input union. \`possibleTypes\` is a valid field.
+        """
+        INPUT_UNION
 
         """Indicates this type is an enum. \`enumValues\` is a valid field."""
         ENUM
@@ -907,6 +921,9 @@ describe('Type System Printer', () => {
         # Location adjacent to a schema definition.
         SCHEMA
 
+        # Location adjacent to a literal definition.
+        LITERAL
+
         # Location adjacent to a scalar definition.
         SCALAR
 
@@ -924,6 +941,9 @@ describe('Type System Printer', () => {
 
         # Location adjacent to a union definition.
         UNION
+
+        # Location adjacent to an input union definition.
+        INPUT_UNION
 
         # Location adjacent to an enum definition.
         ENUM
@@ -995,10 +1015,10 @@ describe('Type System Printer', () => {
       # types in GraphQL as represented by the \`__TypeKind\` enum.
       #
       # Depending on the kind of a type, certain fields describe information about that
-      # type. Scalar types provide no information beyond a name and description, while
-      # Enum types provide their values. Object and Interface types provide the fields
-      # they describe. Abstract types, Union and Interface, provide the Object types
-      # possible at runtime. List and NonNull types compose other types.
+      # type. Scalar and Literal types provide no information beyond a name and
+      # description, while Enum types provide their values. Object and Interface types
+      # provide the fields they describe. Abstract types, Union and Interface, provide
+      # the Object types possible at runtime. List and NonNull types compose other types.
       type __Type {
         kind: __TypeKind!
         name: String
@@ -1013,6 +1033,9 @@ describe('Type System Printer', () => {
 
       # An enum describing what kind of type a given \`__Type\` is.
       enum __TypeKind {
+        # Indicates this type is a literal.
+        LITERAL
+
         # Indicates this type is a scalar.
         SCALAR
 
@@ -1024,6 +1047,9 @@ describe('Type System Printer', () => {
 
         # Indicates this type is a union. \`possibleTypes\` is a valid field.
         UNION
+
+        # Indicates this type is an input union. \`possibleTypes\` is a valid field.
+        INPUT_UNION
 
         # Indicates this type is an enum. \`enumValues\` is a valid field.
         ENUM

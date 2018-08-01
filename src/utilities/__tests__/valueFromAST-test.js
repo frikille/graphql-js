@@ -11,6 +11,8 @@ import { valueFromAST } from '../valueFromAST';
 import {
   GraphQLEnumType,
   GraphQLInputObjectType,
+  GraphQLLiteralType,
+  GraphQLInputUnionType,
   GraphQLList,
   GraphQLInt,
   GraphQLFloat,
@@ -140,6 +142,7 @@ describe('valueFromAST', () => {
       int: { type: GraphQLInt, defaultValue: 42 },
       bool: { type: GraphQLBoolean },
       requiredBool: { type: nonNullBool },
+      kind: { type: new GraphQLLiteralType({ name: 'TestLiteral' }) },
     },
   });
 
@@ -156,6 +159,22 @@ describe('valueFromAST', () => {
       bool: true,
       requiredBool: false,
     });
+    testCase(testInputObj, '{ kind: TestLiteral, requiredBool: false }', {
+      int: 42,
+      kind: 'TestLiteral',
+      requiredBool: false,
+    });
+    testCaseWithVars(
+      { kind: 'TestLiteral', bool: false },
+      testInputObj,
+      '{ kind: $kind requiredBool: $bool }',
+      {
+        int: 42,
+        kind: 'TestLiteral',
+        requiredBool: false,
+      },
+    );
+
     testCase(testInputObj, '{ int: true, requiredBool: true }', undefined);
     testCase(testInputObj, '{ requiredBool: null }', undefined);
     testCase(testInputObj, '{ bool: true }', undefined);
@@ -188,6 +207,36 @@ describe('valueFromAST', () => {
     testCaseWithVars({ foo: true }, testInputObj, '{ requiredBool: $foo }', {
       int: 42,
       requiredBool: true,
+    });
+  });
+
+  describe('InputUnionType', () => {
+    const FooInputObject = new GraphQLInputObjectType({
+      name: 'FooInputObject',
+      fields: {
+        kind: { type: new GraphQLLiteralType({ name: 'FooType' }) },
+        foo: { type: GraphQLNonNull(GraphQLInt) },
+      },
+    });
+
+    const BarInputObject = new GraphQLInputObjectType({
+      name: 'BarInputObject',
+      fields: {
+        kind: { type: new GraphQLLiteralType({ name: 'BarType' }) },
+        bar: { type: GraphQLNonNull(GraphQLString) },
+      },
+    });
+
+    const FooBarInputUnionType = new GraphQLInputUnionType({
+      name: 'FooBarInputUnion',
+      types: [FooInputObject, BarInputObject],
+    });
+
+    it('coerces to the correct input union type', () => {
+      testCase(FooBarInputUnionType, '{ kind: FooType foo: 12 }', {
+        kind: 'FooType',
+        foo: 12,
+      });
     });
   });
 });

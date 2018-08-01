@@ -16,6 +16,8 @@ import {
   GraphQLEnumType,
   GraphQLInputObjectType,
   GraphQLNonNull,
+  GraphQLLiteralType,
+  GraphQLInputUnionType,
 } from '../../type';
 
 function expectValue(result) {
@@ -280,6 +282,70 @@ describe('coerceValue', () => {
       const result = coerceValue({ foo: 123, bart: 123 }, TestInputObject);
       expectErrors(result).to.deep.equal([
         'Field "bart" is not defined by type TestInputObject; did you mean bar?',
+      ]);
+    });
+  });
+
+  describe('for GraphQLLiteral', () => {
+    const TestScalar = new GraphQLLiteralType({
+      name: 'TestScalar',
+    });
+
+    it(`returns no error for valid input`, () => {
+      const result = coerceValue('TestScalar', TestScalar);
+
+      expectValue(result).to.equal('TestScalar');
+    });
+
+    it('returns error', () => {
+      const result = coerceValue('InvalidTestScalar', TestScalar);
+
+      expectErrors(result).to.deep.equal([
+        'Expected type TestScalar; String InvalidTestScalar cannot represent TestScalar',
+      ]);
+    });
+  });
+
+  describe('for GraphQLInputUnion', () => {
+    const FooInputObject = new GraphQLInputObjectType({
+      name: 'FooInputObject',
+      fields: {
+        kind: { type: new GraphQLLiteralType({ name: 'FooType' }) },
+        foo: { type: GraphQLNonNull(GraphQLInt) },
+      },
+    });
+
+    const BarInputObject = new GraphQLInputObjectType({
+      name: 'BarInputObject',
+      fields: {
+        kind: { type: new GraphQLLiteralType({ name: 'BarType' }) },
+        bar: { type: GraphQLNonNull(GraphQLString) },
+      },
+    });
+
+    const FooBarInputUnionType = new GraphQLInputUnionType({
+      name: 'FooBarInputUnion',
+      types: [FooInputObject, BarInputObject],
+    });
+
+    it('resolves the correct type', () => {
+      const result = coerceValue(
+        { kind: 'FooType', foo: 12 },
+        FooBarInputUnionType,
+      );
+
+      expectValue(result).to.deep.equal({ kind: 'FooType', foo: 12 });
+    });
+
+    it('returns error when input object is incorrect for resolved type', () => {
+      const result = coerceValue(
+        { kind: 'BarType', foo: 12 },
+        FooBarInputUnionType,
+      );
+
+      expectErrors(result).to.deep.equal([
+        'Field value.bar of required type String! was not provided.',
+        'Field "foo" is not defined by type BarInputObject.',
       ]);
     });
   });

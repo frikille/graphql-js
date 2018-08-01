@@ -19,6 +19,8 @@ import {
   GraphQLNonNull,
   GraphQLScalarType,
   GraphQLEnumType,
+  GraphQLInputUnionType,
+  GraphQLLiteralType,
 } from '../../type';
 
 const TestComplexScalar = new GraphQLScalarType({
@@ -61,6 +63,34 @@ const TestNestedInputObject = new GraphQLInputObjectType({
   },
 });
 
+const TestUnionInputObjectA = new GraphQLInputObjectType({
+  name: 'TestUnionInputObjectA',
+  fields: {
+    kind: { type: new GraphQLLiteralType({ name: 'ObjectA' }) },
+    a: { type: GraphQLString },
+    b: { type: GraphQLList(GraphQLString) },
+  },
+});
+const TestUnionInputObjectB = new GraphQLInputObjectType({
+  name: 'TestUnionInputObjectB',
+  fields: {
+    kind: { type: new GraphQLLiteralType({ name: 'ObjectB' }) },
+    c: { type: GraphQLNonNull(GraphQLString) },
+    d: { type: TestComplexScalar },
+  },
+});
+const TestInputUnion = new GraphQLInputUnionType({
+  name: 'TestInputUnion',
+  types: [TestUnionInputObjectA, TestUnionInputObjectB],
+});
+const TestNestedInputUnion = new GraphQLInputObjectType({
+  name: 'TestNestedInputUnion',
+  fields: {
+    na: { type: GraphQLNonNull(TestInputUnion) },
+    nb: { type: GraphQLNonNull(GraphQLString) },
+  },
+});
+
 const TestEnum = new GraphQLEnumType({
   name: 'TestEnum',
   values: {
@@ -93,6 +123,11 @@ const TestType = new GraphQLObjectType({
       type: GraphQLNonNull(TestEnum),
     }),
     fieldWithObjectInput: fieldWithInputArg({ type: TestInputObject }),
+    fieldWithUnionInput: {
+      type: GraphQLString,
+      args: { input: { type: TestInputUnion } },
+      resolve: (_, { input }) => input && JSON.stringify(input),
+    },
     fieldWithNullableStringInput: fieldWithInputArg({ type: GraphQLString }),
     fieldWithNonNullableStringInput: fieldWithInputArg({
       type: GraphQLNonNull(GraphQLString),
@@ -109,6 +144,16 @@ const TestType = new GraphQLObjectType({
       type: TestNestedInputObject,
       defaultValue: 'Hello World',
     }),
+    fieldWithNestedUnionInput: {
+      type: GraphQLString,
+      args: {
+        input: {
+          type: TestNestedInputUnion,
+          defaultValue: 'Hello World',
+        },
+      },
+      resolve: (_, { input }) => input && JSON.stringify(input),
+    },
     list: fieldWithInputArg({ type: GraphQLList(GraphQLString) }),
     nnList: fieldWithInputArg({
       type: GraphQLNonNull(GraphQLList(GraphQLString)),
@@ -220,6 +265,102 @@ describe('Execute: Handles inputs', () => {
         expect(result).to.deep.equal({
           data: {
             fieldWithObjectInput: "{ c: 'foo', d: 'DeserializedValue' }",
+          },
+        });
+      });
+    });
+
+    describe('using inline structs with union input', () => {
+      it('executes with complex input', async () => {
+        const doc = `
+        {
+          a: fieldWithUnionInput(input: {kind: ObjectA, a: "foo", b: ["bar"]})
+          b: fieldWithUnionInput(input: {kind: ObjectB, c: "baz"})
+        }
+        `;
+        const ast = parse(doc);
+        expect(await execute(schema, ast)).to.deep.equal({
+          data: {
+            a: '{"kind":"ObjectA","a":"foo","b":["bar"]}',
+            b: '{"kind":"ObjectB","c":"baz"}',
+          },
+        });
+      });
+      it('properly parses single value to list', async () => {
+        const doc = `
+        {
+          fieldWithUnionInput(input: {kind: ObjectA, a: "foo", b: "bar"})
+        }
+        `;
+        const ast = parse(doc);
+        expect(await execute(schema, ast)).to.deep.equal({
+          data: {
+            fieldWithUnionInput: '{"kind":"ObjectA","a":"foo","b":["bar"]}',
+          },
+        });
+      });
+      it('properly parses null value to null', async () => {
+        const doc = `
+        {
+          a: fieldWithUnionInput(input: {kind: "ObjectA", a: null, b: null, c: "C", d: null})
+          b: fieldWithUnionInput(input: {kind: "ObjectB", c: "C", d: null})
+        }
+        `;
+        const ast = parse(doc);
+        expect(await execute(schema, ast)).to.deep.equal({
+          data: {
+            a: '{"kind":"ObjectA","a":null,"b":null}',
+            b: '{"kind":"ObjectB","c":"C","d":null}',
+          },
+        });
+      });
+      it('properly parses null value in list', async () => {
+        const doc = `
+        {
+          fieldWithUnionInput(input: {kind: "ObjectA", b: ["A",null,"C"]})
+        }
+        `;
+        const ast = parse(doc);
+        expect(await execute(schema, ast)).to.deep.equal({
+          data: {
+            fieldWithUnionInput: '{"kind":"ObjectA","b":["A",null,"C"]}',
+          },
+        });
+      });
+      it('does not use incorrect value', async () => {
+        const doc = `
+        {
+          fieldWithUnionInput(input: ["foo", "bar", "baz"])
+        }
+        `;
+        const ast = parse(doc);
+        const result = await execute(schema, ast);
+
+        expect(result).to.deep.equal({
+          data: {
+            fieldWithUnionInput: null,
+          },
+          errors: [
+            {
+              message:
+                'Argument "input" has invalid value ["foo", "bar", "baz"].',
+              path: ['fieldWithUnionInput'],
+              locations: [{ line: 3, column: 38 }],
+            },
+          ],
+        });
+      });
+      it('properly runs parseLiteral on complex scalar types', async () => {
+        const doc = `
+        {
+          fieldWithUnionInput(input: {kind:"ObjectB", c: "foo", d: "SerializedValue"})
+        }
+        `;
+        const ast = parse(doc);
+        expect(await execute(schema, ast)).to.deep.equal({
+          data: {
+            fieldWithUnionInput:
+              '{"kind":"ObjectB","c":"foo","d":"DeserializedValue"}',
           },
         });
       });
